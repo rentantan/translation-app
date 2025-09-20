@@ -1,65 +1,82 @@
 # Translation App
 
-A modern web application for text translation built with FastAPI (backend) and React + TypeScript (frontend). Features user authentication, real-time translation using Google Translate API, and a clean, responsive interface.
+A modern web application for text translation built with FastAPI (backend) and React + TypeScript (frontend). Features user authentication, real-time translation using Google Translate API, comprehensive translation history management, and a clean, responsive interface.
 
 ## Features
 
 - **User Authentication**: Secure registration and login system with JWT tokens
-- **Real-time Translation**: Translate text between multiple languages
-- **Auto Language Detection**: Automatically detects source language
-- **Modern UI**: Clean, responsive design with gradient backgrounds
-- **Translation History**: Track your translation usage (backend support ready)
+- **Real-time Translation**: Translate text between multiple languages with auto-detection
+- **Translation History Management**: Automatic saving of all translations with full CRUD operations
+- **History Reuse**: One-click restoration of previous translations for editing or retranslation
+- **User Privacy**: Translation history is user-specific and securely stored with authentication
+- **Auto Language Detection**: Automatically detects source language and saves it with translation
+- **Modern UI**: Clean, responsive design with gradient backgrounds and modal interfaces
 - **Multiple Languages**: Support for English, Japanese, French, Spanish, German, Italian, Korean, and Chinese
+
+## Translation History Features
+
+### Automatic History Saving
+Every translation is automatically saved to the database with:
+- Timestamp of translation
+- Detected source language
+- Target language selection
+- Original text and translated result
+- User association for privacy
+
+### History Management Interface
+- **View History**: Click the "履歴" (History) button to open the history modal
+- **Reuse Translations**: Click any history item to restore it to the input fields
+- **Individual Delete**: Use the "×" button on each entry to delete specific translations
+- **Bulk Delete**: Use "全削除" (Clear All) button to remove all history
+- **Search & Filter**: History is displayed in chronological order (most recent first)
+
+### History API Endpoints
+```
+GET    /translations/history           # Retrieve user's translation history
+DELETE /translations/history/{id}      # Delete specific translation
+DELETE /translations/history           # Clear all user's translation history
+```
+
+### Database Schema
+Translation history uses the following database structure:
+```sql
+CREATE TABLE translations (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    source_text TEXT,
+    translated_text TEXT,
+    source_lang TEXT,
+    target_lang TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Privacy & Security
+- All history data requires user authentication
+- Users can only access their own translation records
+- Complete user control over data deletion
+- No client-side storage of sensitive translation data
+- Secure JWT-based API access
 
 ## Tech Stack
 
 ### Backend
 - **FastAPI**: Modern, fast web framework for Python
-- **SQLAlchemy**: SQL toolkit and ORM
-- **SQLite**: Lightweight database for development
-- **JWT Authentication**: Secure token-based authentication
+- **SQLAlchemy**: SQL toolkit and ORM with SQLite database
+- **JWT Authentication**: Secure token-based user authentication
 - **Google Translate API**: Translation service via `googletrans` library
 - **Passlib**: Password hashing and verification
 
 ### Frontend
-- **React 19**: Modern React with hooks
-- **TypeScript**: Type-safe JavaScript
-- **React Router**: Client-side routing
-- **Axios**: HTTP client for API calls
+- **React 19**: Modern React with hooks and functional components
+- **TypeScript**: Type-safe JavaScript development
+- **React Router**: Client-side routing for SPA navigation
+- **Modal Components**: Custom translation history interface
 - **CSS-in-JS**: Inline styling for component-based design
-
-## Project Structure
-
-```
-translation-app/
-├── backend/
-│   ├── main.py              # FastAPI application entry point
-│   ├── auth.py              # Authentication utilities
-│   ├── crud.py              # Database operations
-│   ├── database.py          # Database configuration
-│   ├── models.py            # SQLAlchemy models
-│   ├── schemas.py           # Pydantic schemas
-│   └── requirements.txt     # Python dependencies
-├── frontend/
-│   ├── public/
-│   │   └── index.html
-│   ├── src/
-│   │   ├── components/      # Reusable React components
-│   │   ├── pages/          # Page components
-│   │   ├── api.ts          # API client functions
-│   │   ├── types.ts        # TypeScript type definitions
-│   │   └── App.tsx         # Main application component
-│   ├── package.json        # Node.js dependencies
-│   └── tsconfig.json       # TypeScript configuration
-├── .gitignore
-├── LICENSE
-└── README.md
-```
 
 ## Getting Started
 
 ### Prerequisites
-
 - Python 3.10 or higher
 - Node.js 18 or higher
 - npm or yarn package manager
@@ -68,25 +85,19 @@ translation-app/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/translation-app.git
+   git clone <your-repository-url>
    cd translation-app
    ```
 
-2. **Set up the backend**
+2. **Backend setup**
    ```bash
    cd backend
    python -m venv venv
-   
-   # Activate virtual environment
-   # On macOS/Linux:
-   source venv/bin/activate
-   # On Windows:
-   # venv\Scripts\activate
-   
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. **Set up the frontend**
+3. **Frontend setup**
    ```bash
    cd ../frontend
    npm install
@@ -97,106 +108,33 @@ translation-app/
 1. **Start the backend server**
    ```bash
    cd backend
-   source venv/bin/activate  # Activate virtual environment if not already active
+   source venv/bin/activate
    uvicorn main:app --reload --port 8000
    ```
-   The API will be available at `http://localhost:8000`
 
 2. **Start the frontend development server**
    ```bash
    cd frontend
    npm start
    ```
-   The web application will be available at `http://localhost:3000`
 
-## API Documentation
-
-Once the backend is running, you can access the interactive API documentation at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-### Main Endpoints
-
-- `POST /register` - User registration
-- `POST /login` - User authentication
-- `POST /translate` - Text translation (requires authentication)
+The application will be available at `http://localhost:3000` with the API at `http://localhost:8000`.
 
 ## Usage
 
-1. **Register a new account** or **log in** with existing credentials
+1. **Register** a new account or **login** with existing credentials
 2. **Enter text** to translate in the input field
 3. **Select target language** from the dropdown menu
 4. **Click translate** or press Enter to get the translation
-5. **View results** in the result panel below
+5. **View translation history** by clicking the "履歴" button
+6. **Reuse previous translations** by clicking on any history item
+7. **Manage your data** with individual or bulk delete options
 
-## Configuration
+## API Documentation
 
-### Backend Configuration
-
-The backend uses several configurable parameters:
-
-- **Database**: SQLite database (`app.db`) for development
-- **JWT Secret**: Update `SECRET_KEY` in `auth.py` for production
-- **CORS**: Currently allows all origins for development
-
-### Frontend Configuration
-
-- **API URL**: Currently set to `http://localhost:8000` in API calls
-- **Supported Languages**: Defined in `types.ts`
-
-## Development
-
-### Backend Development
-
-```bash
-cd backend
-source venv/bin/activate
-uvicorn main:app --reload --port 8000
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-npm start
-```
-
-The application supports hot reloading for both backend and frontend during development.
-
-## Testing
-
-### Backend Testing
-```bash
-cd backend
-# Example API test
-curl -X POST "http://localhost:8000/translate" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"text":"Hello world","target_lang":"ja"}'
-```
-
-### Frontend Testing
-```bash
-cd frontend
-npm test
-```
-
-## Deployment
-
-### Production Considerations
-
-1. **Update JWT Secret**: Change the `SECRET_KEY` in `auth.py`
-2. **Database**: Consider upgrading to PostgreSQL for production
-3. **CORS**: Restrict allowed origins in production
-4. **Environment Variables**: Use environment variables for sensitive configuration
-5. **HTTPS**: Enable SSL/TLS for secure communication
-
-### Build for Production
-
-```bash
-cd frontend
-npm run build
-```
+Interactive API documentation is available at:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
 ## Contributing
 
@@ -206,40 +144,6 @@ npm run build
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Known Issues
-
-- Translation service may have rate limits
-- Long texts might timeout - consider implementing chunking
-- Google Translate API requires internet connection
-
-## Future Enhancements
-
-- [ ] Translation history persistence
-- [ ] Offline translation support
-- [ ] File upload for document translation
-- [ ] Speech-to-text integration
-- [ ] Multiple translation provider support
-- [ ] User preferences and settings
-- [ ] Export translation results
-- [ ] Dark/light theme toggle
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Google Translate](https://translate.google.com/) for translation services
-- [FastAPI](https://fastapi.tiangolo.com/) for the excellent Python web framework
-- [React](https://reactjs.org/) for the frontend framework
-- All contributors and users of this application
-
-## Support
-
-If you encounter any issues or have questions, please:
-
-1. Check the existing issues on GitHub
-2. Create a new issue with detailed information about the problem
-3. Include steps to reproduce the issue
-
----
