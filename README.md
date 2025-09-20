@@ -1,130 +1,245 @@
-```markdown
-# 🌍 Translation App
+# Translation App
 
-FastAPI（バックエンド）と React + TypeScript（フロントエンド）で構築したシンプルな翻訳アプリです。  
-ユーザーが入力した文章を自動で言語検出し、指定した言語へ翻訳します。
+A modern web application for text translation built with FastAPI (backend) and React + TypeScript (frontend). Features user authentication, real-time translation using Google Translate API, and a clean, responsive interface.
 
----
+## Features
 
-## 🚀 主な機能
+- **User Authentication**: Secure registration and login system with JWT tokens
+- **Real-time Translation**: Translate text between multiple languages
+- **Auto Language Detection**: Automatically detects source language
+- **Modern UI**: Clean, responsive design with gradient backgrounds
+- **Translation History**: Track your translation usage (backend support ready)
+- **Multiple Languages**: Support for English, Japanese, French, Spanish, German, Italian, Korean, and Chinese
 
-- 🌐 入力テキストの翻訳（自動言語検出）
-- 🌍 翻訳先言語の選択（主要言語のみ対応）
-- ⌨️ Enterキーで翻訳実行（Shift+Enterで改行）
-- 🧾 翻訳結果はカード形式で表示（長文はスクロール可能）
-- 🧪 フロントエンドとバックエンドを分離したローカル開発構成
+## Tech Stack
 
----
+### Backend
+- **FastAPI**: Modern, fast web framework for Python
+- **SQLAlchemy**: SQL toolkit and ORM
+- **SQLite**: Lightweight database for development
+- **JWT Authentication**: Secure token-based authentication
+- **Google Translate API**: Translation service via `googletrans` library
+- **Passlib**: Password hashing and verification
 
-## 🧩 動作環境（推奨）
+### Frontend
+- **React 19**: Modern React with hooks
+- **TypeScript**: Type-safe JavaScript
+- **React Router**: Client-side routing
+- **Axios**: HTTP client for API calls
+- **CSS-in-JS**: Inline styling for component-based design
 
-- Python 3.10+（ローカルでは 3.12 を想定）
-- Node.js 18+ / npm 8+
-- Git
+## Project Structure
 
----
-
-## 📁 ディレクトリ構成
-
-```plaintext
+```
 translation-app/
-├── backend/         # FastAPI (Python)
-│   ├── main.py
-│   └── requirements.txt
-├── frontend/        # React + TypeScript
-│   ├── package.json
-│   └── src/
+├── backend/
+│   ├── main.py              # FastAPI application entry point
+│   ├── auth.py              # Authentication utilities
+│   ├── crud.py              # Database operations
+│   ├── database.py          # Database configuration
+│   ├── models.py            # SQLAlchemy models
+│   ├── schemas.py           # Pydantic schemas
+│   └── requirements.txt     # Python dependencies
+├── frontend/
+│   ├── public/
+│   │   └── index.html
+│   ├── src/
+│   │   ├── components/      # Reusable React components
+│   │   ├── pages/          # Page components
+│   │   ├── api.ts          # API client functions
+│   │   ├── types.ts        # TypeScript type definitions
+│   │   └── App.tsx         # Main application component
+│   ├── package.json        # Node.js dependencies
+│   └── tsconfig.json       # TypeScript configuration
 ├── .gitignore
-├── README.md
-└── LICENSE
+├── LICENSE
+└── README.md
 ```
 
----
+## Getting Started
 
-## ⚡ ローカルセットアップ手順
+### Prerequisites
 
-### 1️⃣ リポジトリをクローン
+- Python 3.10 or higher
+- Node.js 18 or higher
+- npm or yarn package manager
 
-```bash
-git clone https://github.com/rentantan/translation-app.git
-cd translation-app
-```
+### Installation
 
-### 2️⃣ バックエンド起動（FastAPI）
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/translation-app.git
+   cd translation-app
+   ```
+
+2. **Set up the backend**
+   ```bash
+   cd backend
+   python -m venv venv
+   
+   # Activate virtual environment
+   # On macOS/Linux:
+   source venv/bin/activate
+   # On Windows:
+   # venv\Scripts\activate
+   
+   pip install -r requirements.txt
+   ```
+
+3. **Set up the frontend**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+### Running the Application
+
+1. **Start the backend server**
+   ```bash
+   cd backend
+   source venv/bin/activate  # Activate virtual environment if not already active
+   uvicorn main:app --reload --port 8000
+   ```
+   The API will be available at `http://localhost:8000`
+
+2. **Start the frontend development server**
+   ```bash
+   cd frontend
+   npm start
+   ```
+   The web application will be available at `http://localhost:3000`
+
+## API Documentation
+
+Once the backend is running, you can access the interactive API documentation at:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+### Main Endpoints
+
+- `POST /register` - User registration
+- `POST /login` - User authentication
+- `POST /translate` - Text translation (requires authentication)
+
+## Usage
+
+1. **Register a new account** or **log in** with existing credentials
+2. **Enter text** to translate in the input field
+3. **Select target language** from the dropdown menu
+4. **Click translate** or press Enter to get the translation
+5. **View results** in the result panel below
+
+## Configuration
+
+### Backend Configuration
+
+The backend uses several configurable parameters:
+
+- **Database**: SQLite database (`app.db`) for development
+- **JWT Secret**: Update `SECRET_KEY` in `auth.py` for production
+- **CORS**: Currently allows all origins for development
+
+### Frontend Configuration
+
+- **API URL**: Currently set to `http://localhost:8000` in API calls
+- **Supported Languages**: Defined in `types.ts`
+
+## Development
+
+### Backend Development
 
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate   # macOS / Linux
-# venv\Scripts\activate    # Windows
-
-pip install -r requirements.txt
+source venv/bin/activate
 uvicorn main:app --reload --port 8000
-# → http://localhost:8000 で起動
 ```
 
-### 3️⃣ フロントエンド起動（React + TypeScript）
+### Frontend Development
 
 ```bash
-cd ../frontend
-npm install
-npm start            # CRA の場合
-# npm run dev        # Vite の場合
-# → http://localhost:3000 または http://localhost:5173 で起動
+cd frontend
+npm start
 ```
 
----
+The application supports hot reloading for both backend and frontend during development.
 
-## 🔎 API 動作確認（例）
+## Testing
 
+### Backend Testing
 ```bash
+cd backend
+# Example API test
 curl -X POST "http://localhost:8000/translate" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"text":"Hello world","target_lang":"ja"}'
 ```
 
-期待されるレスポンス：
-
-```json
-{
-  "translated_text": "こんにちは世界"
-}
+### Frontend Testing
+```bash
+cd frontend
+npm test
 ```
 
----
+## Deployment
 
-## 🛠 よくあるトラブルと対処法
+### Production Considerations
 
-| 問題 | 対処法 |
-|------|--------|
-| CORS エラー | バックエンドの CORS 設定を確認（開発時は `allow_origins=["*"]` 推奨） |
-| googletrans が不安定 | 長文は分割するか、Google Cloud Translation API / DeepL API の利用を検討 |
-| 依存関係の不整合 | 仮想環境の有効化を確認し、`pip install` / `npm install` を再実行 |
+1. **Update JWT Secret**: Change the `SECRET_KEY` in `auth.py`
+2. **Database**: Consider upgrading to PostgreSQL for production
+3. **CORS**: Restrict allowed origins in production
+4. **Environment Variables**: Use environment variables for sensitive configuration
+5. **HTTPS**: Enable SSL/TLS for secure communication
 
----
+### Build for Production
 
-## 🧾 ライセンス
-
-このプロジェクトは [MIT License](LICENSE) の下で公開されています。
-
----
-
-## 🧭 開発ルール（推奨）
-
-コミットメッセージは以下の3種類で統一すると履歴が明快になります：
-
-- `feat:` 新機能追加  
-- `fix:` バグ修正  
-- `chore:` ドキュメント・設定変更など
-
-フロントとバックは同一リポジトリに置きつつ、コミットは分けて管理するのがベストです。
-
----
-
-## ➕ 拡張アイデア
-
-- 🕘 翻訳履歴を localStorage に保存  
-- 👤 ユーザー登録 / 認証機能（簡易 DB 実装）  
-- ⏹️ 翻訳中のキャンセル（AbortController の活用）  
-- 🎨 UI を TailwindCSS や Chakra UI で強化  
+```bash
+cd frontend
+npm run build
 ```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Known Issues
+
+- Translation service may have rate limits
+- Long texts might timeout - consider implementing chunking
+- Google Translate API requires internet connection
+
+## Future Enhancements
+
+- [ ] Translation history persistence
+- [ ] Offline translation support
+- [ ] File upload for document translation
+- [ ] Speech-to-text integration
+- [ ] Multiple translation provider support
+- [ ] User preferences and settings
+- [ ] Export translation results
+- [ ] Dark/light theme toggle
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Google Translate](https://translate.google.com/) for translation services
+- [FastAPI](https://fastapi.tiangolo.com/) for the excellent Python web framework
+- [React](https://reactjs.org/) for the frontend framework
+- All contributors and users of this application
+
+## Support
+
+If you encounter any issues or have questions, please:
+
+1. Check the existing issues on GitHub
+2. Create a new issue with detailed information about the problem
+3. Include steps to reproduce the issue
+
+---
