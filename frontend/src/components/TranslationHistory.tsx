@@ -91,20 +91,48 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const date = new Date(dateString);
+      
+      // 無効な日付をチェック
+      if (isNaN(date.getTime())) {
+        return "無効な日付";
+      }
+      
+      // 現在の時刻と比較して相対時間を表示
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      
+      if (diffInMinutes < 1) {
+        return "たった今";
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes}分前`;
+      } else if (diffInMinutes < 24 * 60) {
+        const hours = Math.floor(diffInMinutes / 60);
+        return `${hours}時間前`;
+      } else if (diffInMinutes < 7 * 24 * 60) {
+        const days = Math.floor(diffInMinutes / (24 * 60));
+        return `${days}日前`;
+      } else {
+        // 1週間以上前の場合は具体的な日時を表示
+        return date.toLocaleString("ja-JP", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Tokyo" // 日本時間で表示
+        });
+      }
+    } catch (error) {
+      return "日付エラー";
+    }
   };
 
   const getLanguageName = (code: string) => {
     const languages: Record<string, string> = {
       en: "英語",
-      ja: "日本語",
+      ja: "日本語", 
       fr: "フランス語",
       es: "スペイン語",
       de: "ドイツ語",
@@ -112,8 +140,33 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
       ko: "韓国語",
       "zh-cn": "中国語（簡体）",
       "zh-tw": "中国語（繁体）",
+      pt: "ポルトガル語",
+      ru: "ロシア語",
+      ar: "アラビア語",
+      th: "タイ語",
+      vi: "ベトナム語",
     };
     return languages[code] || code;
+  };
+
+  const getLanguageFlag = (code: string) => {
+    const flags: Record<string, string> = {
+      en: "🇺🇸",
+      ja: "🇯🇵",
+      fr: "🇫🇷", 
+      es: "🇪🇸",
+      de: "🇩🇪",
+      it: "🇮🇹",
+      ko: "🇰🇷",
+      "zh-cn": "🇨🇳",
+      "zh-tw": "🇹🇼",
+      pt: "🇵🇹",
+      ru: "🇷🇺",
+      ar: "🇸🇦",
+      th: "🇹🇭",
+      vi: "🇻🇳",
+    };
+    return flags[code] || "🌐";
   };
 
   useEffect(() => {
@@ -146,7 +199,7 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
           backgroundColor: "white",
           borderRadius: "20px",
           padding: "2rem",
-          maxWidth: "800px",
+          maxWidth: "900px",
           width: "100%",
           maxHeight: "90vh",
           overflow: "hidden",
@@ -157,7 +210,9 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h2 style={{ margin: 0, color: "#333", fontSize: "1.8rem" }}>翻訳履歴</h2>
+          <h2 style={{ margin: 0, color: "#333", fontSize: "1.8rem" }}>
+            翻訳履歴 ({history.length}件)
+          </h2>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             {history.length > 0 && (
               <button
@@ -170,7 +225,10 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                   color: "white",
                   cursor: "pointer",
                   fontSize: "0.9rem",
+                  transition: "background-color 0.2s ease",
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#c0392b"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "#e74c3c"}
               >
                 全削除
               </button>
@@ -185,7 +243,10 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                 color: "white",
                 cursor: "pointer",
                 fontSize: "0.9rem",
+                transition: "background-color 0.2s ease",
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#7f8c8d"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "#95a5a6"}
             >
               閉じる
             </button>
@@ -193,19 +254,31 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
         </div>
 
         {error && (
-          <div style={{ color: "#e74c3c", marginBottom: "1rem", padding: "0.5rem", backgroundColor: "#ffeaa7", borderRadius: "5px" }}>
-            {error}
+          <div style={{ 
+            color: "#e74c3c", 
+            marginBottom: "1rem", 
+            padding: "0.75rem", 
+            backgroundColor: "#ffeaa7", 
+            borderRadius: "8px",
+            border: "1px solid #f39c12"
+          }}>
+            ⚠️ {error}
           </div>
         )}
 
         <div style={{ flex: 1, overflowY: "auto" }}>
           {loading ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
+            <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}>
+              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>
               読み込み中...
             </div>
           ) : history.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
+            <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📝</div>
               翻訳履歴がありません
+              <div style={{ fontSize: "0.9rem", marginTop: "0.5rem", color: "#999" }}>
+                翻訳を実行すると、ここに履歴が表示されます
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -218,25 +291,33 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                     padding: "1rem",
                     backgroundColor: "#f8f9fa",
                     cursor: onSelectTranslation ? "pointer" : "default",
-                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                    transition: "all 0.2s ease",
+                    position: "relative",
                   }}
                   onMouseEnter={(e) => {
                     if (onSelectTranslation) {
                       e.currentTarget.style.transform = "translateY(-2px)";
                       e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.1)";
+                      e.currentTarget.style.borderColor = "#3498db";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (onSelectTranslation) {
                       e.currentTarget.style.transform = "translateY(0)";
                       e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#e0e0e0";
                     }
                   }}
                   onClick={() => onSelectTranslation && onSelectTranslation(item)}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                    <div style={{ fontSize: "0.9rem", color: "#666" }}>
-                      {formatDate(item.created_at)} | {getLanguageName(item.source_lang || "auto")} → {getLanguageName(item.target_lang)}
+                    <div style={{ fontSize: "0.85rem", color: "#666", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span>🕒 {formatDate(item.created_at)}</span>
+                      <span>|</span>
+                      <span>
+                        {getLanguageFlag(item.source_lang || "auto")} {getLanguageName(item.source_lang || "auto")} 
+                        → {getLanguageFlag(item.target_lang)} {getLanguageName(item.target_lang)}
+                      </span>
                     </div>
                     <button
                       onClick={(e) => {
@@ -248,9 +329,18 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                         border: "none",
                         color: "#e74c3c",
                         cursor: "pointer",
-                        fontSize: "1rem",
+                        fontSize: "1.2rem",
                         padding: "0.2rem",
                         borderRadius: "4px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#fee";
+                        e.currentTarget.style.transform = "scale(1.1)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.transform = "scale(1)";
                       }}
                       title="削除"
                     >
@@ -259,7 +349,9 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                   </div>
                   
                   <div style={{ marginBottom: "0.75rem" }}>
-                    <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.25rem" }}>原文:</div>
+                    <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.25rem", fontWeight: "600" }}>
+                      📄 原文:
+                    </div>
                     <div style={{ 
                       backgroundColor: "white", 
                       padding: "0.75rem", 
@@ -271,13 +363,16 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
+                      border: "1px solid #e8e8e8",
                     }}>
                       {item.source_text}
                     </div>
                   </div>
                   
                   <div>
-                    <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.25rem" }}>翻訳結果:</div>
+                    <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "0.25rem", fontWeight: "600" }}>
+                      🌐 翻訳結果:
+                    </div>
                     <div style={{ 
                       backgroundColor: "#e8f4fd", 
                       padding: "0.75rem", 
@@ -289,10 +384,24 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
+                      border: "1px solid #d6eaf8",
                     }}>
                       {item.translated_text}
                     </div>
                   </div>
+                  
+                  {onSelectTranslation && (
+                    <div style={{
+                      position: "absolute",
+                      bottom: "0.5rem",
+                      right: "0.5rem",
+                      fontSize: "0.8rem",
+                      color: "#3498db",
+                      opacity: 0.7,
+                    }}>
+                      クリックして再利用 →
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
