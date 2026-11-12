@@ -1,16 +1,18 @@
-# backend/models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from datetime import datetime
-import pytz
+
 from database import Base
 
-# 日本時間のタイムゾーン
-JST = pytz.timezone('Asia/Tokyo')
+# 日本時間（夏時間がないので固定オフセットで十分）
+JST = timezone(timedelta(hours=9), "JST")
 
-def get_jst_now():
-    """日本時間の現在時刻を取得"""
+
+def get_jst_now() -> datetime:
+    """日本時間の現在時刻を取得（SQLite には naive な JST として保存される）"""
     return datetime.now(JST)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -20,13 +22,16 @@ class User(Base):
     hashed_password = Column(String)
     created_at = Column(DateTime, default=get_jst_now)
 
-    translations = relationship("TranslationHistory", back_populates="user")
+    translations = relationship(
+        "TranslationHistory", back_populates="user", cascade="all, delete-orphan"
+    )
+
 
 class TranslationHistory(Base):
     __tablename__ = "translations"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     source_text = Column(String)
     translated_text = Column(String)
     source_lang = Column(String)

@@ -1,182 +1,157 @@
-from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from googletrans import Translator
-from jose import JWTError, jwt
-from typing import List
-from datetime import datetime
 
-from database import SessionLocal, Base, engine
-from models import User, TranslationHistory
-from auth import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
-from crud import get_user_by_username, create_user
-from schemas import UserCreate, UserOut, Token, TranslationOut
+import crud
+from auth import create_access_token, decode_access_token, verify_password
+from config import CORS_ORIGINS
+from database import Base, engine, get_db
+from models import User
+from schemas import (
+    Token,
+    TranslationPage,
+    TranslationRequest,
+    TranslationResponse,
+    UserCreate,
+    UserOut,
+)
+from translator import TranslateFn, get_translate_fn
+
+logger = logging.getLogger(__name__)
 
 # ======================
 # FastAPI アプリ初期化
 # ======================
-app = FastAPI()
+app = FastAPI(title="Translation App API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# DB 初期化
 Base.metadata.create_all(bind=engine)
 
-# OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# DB セッション依存性
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
-# 現在のユーザーを取得
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = get_user_by_username(db, username=username)
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    username = decode_access_token(token)
+    user = crud.get_user_by_username(db, username) if username else None
     if user is None:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="認証の有効期限が切れました。再度ログインしてください",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
+
 # ======================
-# ユーザー関連エンドポイント
+# ユーザー関連
 # ======================
 
-@app.post("/register", response_model=UserOut)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    if get_user_by_username(db, user.username):
-        raise HTTPException(status_code=400, detail="Username already registered")
-    return create_user(db, user.username, user.password)
+    if crud.get_user_by_username(db, user.username):
+        raise HTTPException(status_code=400, detail="このユーザー名は既に使われています")
+    return crud.create_user(db, user.username, user.password)
 
 
 @app.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = get_user_by_username(db, form_data.username)
+    user = crud.get_user_by_username(db, form_data.username.strip())
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="ユーザー名またはパスワードが違います")
     token = create_access_token({"sub": user.username})
     return {"access_token": token, "token_type": "bearer"}
 
 
+@app.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
 # ======================
-# 翻訳API
+# 翻訳
 # ======================
-translator = Translator()
 
-class TranslationRequest(BaseModel):
-    text: str
-    target_lang: str = "en"
-
-class TranslationResponse(BaseModel):
-    translated_text: str
-    source_lang: str = None
-
-MAX_CHUNK = 500  # 長文対策
 
 @app.post("/translate", response_model=TranslationResponse)
-def translate(
-    request: TranslationRequest, 
+async def translate(
+    request: TranslationRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    translate_fn: TranslateFn = Depends(get_translate_fn),
 ):
-    text = request.text
-    chunks = [text[i:i+MAX_CHUNK] for i in range(0, len(text), MAX_CHUNK)]
-    translated_text = ""
-    detected_lang = None
-    
-    for chunk in chunks:
-        try:
-            result = translator.translate(chunk, dest=request.target_lang)
-            translated_text += result.text
-            if detected_lang is None:
-                detected_lang = result.src
-        except Exception as e:
-            raise HTTPException(status_code=500, detail="翻訳に失敗しました")
-    
-    # 翻訳履歴を保存
-    translation_history = TranslationHistory(
+    try:
+        translated_text, detected_lang = await translate_fn(
+            request.text, request.target_lang, request.source_lang
+        )
+    except Exception:
+        logger.exception("translation failed")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="翻訳サービスに接続できませんでした。時間をおいて再度お試しください",
+        )
+
+    crud.create_translation(
+        db,
         user_id=current_user.id,
-        source_text=text,
+        source_text=request.text,
         translated_text=translated_text,
         source_lang=detected_lang,
-        target_lang=request.target_lang
+        target_lang=request.target_lang,
     )
-    db.add(translation_history)
-    db.commit()
-    
-    return {
-        "translated_text": translated_text,
-        "source_lang": detected_lang
-    }
+    return {"translated_text": translated_text, "source_lang": detected_lang}
+
 
 # ======================
-# 翻訳履歴API
+# 翻訳履歴
 # ======================
 
-@app.get("/translations/history", response_model=List[TranslationOut])
+
+@app.get("/translations/history", response_model=TranslationPage)
 def get_translation_history(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    q: str | None = Query(None, max_length=200, description="原文・訳文の部分一致検索"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """ユーザーの翻訳履歴を取得"""
-    translations = db.query(TranslationHistory).filter(
-        TranslationHistory.user_id == current_user.id
-    ).order_by(TranslationHistory.created_at.desc()).offset(skip).limit(limit).all()
-    
-    return translations
+    """ユーザーの翻訳履歴を新しい順に取得"""
+    items, total = crud.list_translations(db, current_user.id, skip, limit, (q or "").strip())
+    return {"items": items, "total": total}
+
 
 @app.delete("/translations/history/{translation_id}")
 def delete_translation(
     translation_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """特定の翻訳履歴を削除"""
-    translation = db.query(TranslationHistory).filter(
-        TranslationHistory.id == translation_id,
-        TranslationHistory.user_id == current_user.id
-    ).first()
-    
-    if not translation:
-        raise HTTPException(status_code=404, detail="Translation not found")
-    
-    db.delete(translation)
-    db.commit()
+    if not crud.delete_translation(db, current_user.id, translation_id):
+        raise HTTPException(status_code=404, detail="履歴が見つかりません")
     return {"message": "Translation deleted successfully"}
+
 
 @app.delete("/translations/history")
 def clear_translation_history(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """ユーザーの全翻訳履歴を削除"""
-    db.query(TranslationHistory).filter(
-        TranslationHistory.user_id == current_user.id
-    ).delete()
-    db.commit()
-    return {"message": "Translation history cleared successfully"}
+    deleted = crud.clear_translations(db, current_user.id)
+    return {"message": "Translation history cleared successfully", "deleted": deleted}

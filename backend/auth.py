@@ -1,22 +1,42 @@
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from jose import jwt
+from datetime import datetime, timedelta, timezone
 
-SECRET_KEY = "YOUR_SECRET_KEY"  # 適当に変更
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+import bcrypt
+import jwt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+# bcrypt は先頭 72 バイトしか使わない（超えると bcrypt>=5 は例外を投げる）
+_BCRYPT_MAX_BYTES = 72
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def _encode(password: str) -> bytes:
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(_encode(plain_password), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
+
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(_encode(password), bcrypt.gensalt()).decode("utf-8")
+
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    to_encode["exp"] = expire
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str) -> str | None:
+    """トークンを検証してユーザー名を返す。無効なら None。"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    return payload.get("sub")

@@ -1,25 +1,24 @@
-import React from 'react';
+import React from "react";
+import { languageLabel } from "../types";
 
-type Props = { text: string };
+type Props = {
+  text: string;
+  targetLang: string;
+  onCopy: (text: string) => void;
+};
 
-const TranslationResult: React.FC<Props> = ({ text }) => {
+const TranslationResult: React.FC<Props> = ({ text, targetLang, onCopy }) => {
   if (!text) return null;
   return (
-    <div
-      style={{
-        marginTop: '1.5rem',
-        padding: '1rem',
-        borderRadius: '12px',
-        backgroundColor: '#f0f4ff',
-        minHeight: '3rem',
-        fontSize: '1rem',
-        whiteSpace: 'pre-wrap',
-        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)',
-        overflowY: 'auto',
-      }}
-    >
-      {text}
-    </div>
+    <section className="result" aria-live="polite">
+      <div className="result__header">
+        <span>翻訳結果（{languageLabel(targetLang)}）</span>
+        <button type="button" className="icon-btn" onClick={() => onCopy(text)} title="翻訳結果をコピー">
+          📋 コピー
+        </button>
+      </div>
+      <div className="result__body">{text}</div>
+    </section>
   );
 };
 

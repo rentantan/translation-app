@@ -1,28 +1,30 @@
-import React from 'react';
+import React from "react";
+import { AUTO_DETECT, Language, languageLabel } from "../types";
 
 type Props = {
-  languages: { code: string; label: string }[];
+  languages: Language[];
   value: string;
   onChange: (val: string) => void;
+  label: string;
+  /** 「自動検出」を選択肢に含めるか（翻訳元のみ） */
+  allowAuto?: boolean;
+  /** 自動検出で判定された言語（表示用） */
+  detected?: string | null;
 };
 
-const LanguageSelect: React.FC<Props> = ({ languages, value, onChange }) => {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{ flex: 1, padding: '0.8rem', borderRadius: '12px', border: '1px solid #ccc', fontSize: '1rem' }}
-    >
-      <option value="" disabled>
-        翻訳する言語を選択
+const LanguageSelect: React.FC<Props> = ({ languages, value, onChange, label, allowAuto, detected }) => (
+  <select className="select" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
+    {allowAuto && (
+      <option value={AUTO_DETECT}>
+        {value === AUTO_DETECT && detected ? `自動検出（${languageLabel(detected)}）` : "🌐 自動検出"}
       </option>
-      {languages.map((l) => (
-        <option key={l.code} value={l.code}>
-          {l.label}
-        </option>
-      ))}
-    </select>
-  );
-};
+    )}
+    {languages.map((l) => (
+      <option key={l.code} value={l.code}>
+        {l.flag} {l.label}
+      </option>
+    ))}
+  </select>
+);
 
 export default LanguageSelect;

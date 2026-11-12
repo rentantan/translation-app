@@ -1,149 +1,192 @@
-# Translation App
+# 🌐 翻訳アプリ
 
-A modern web application for text translation built with FastAPI (backend) and React + TypeScript (frontend). Features user authentication, real-time translation using Google Translate API, comprehensive translation history management, and a clean, responsive interface.
+ログインして使う、シンプルな多言語翻訳 Web アプリです。
+翻訳した内容は自動で履歴に保存され、あとから検索したり再利用したりできます。
 
-## Features
+**FastAPI** + **React (TypeScript)** / 翻訳エンジンは Google 翻訳（[googletrans](https://pypi.org/project/googletrans/)）
 
-- **User Authentication**: Secure registration and login system with JWT tokens
-- **Real-time Translation**: Translate text between multiple languages with auto-detection
-- **Translation History Management**: Automatic saving of all translations with full CRUD operations
-- **History Reuse**: One-click restoration of previous translations for editing or retranslation
-- **User Privacy**: Translation history is user-specific and securely stored with authentication
-- **Auto Language Detection**: Automatically detects source language and saves it with translation
-- **Modern UI**: Clean, responsive design with gradient backgrounds and modal interfaces
-- **Multiple Languages**: Support for English, Japanese, French, Spanish, German, Italian, Korean, and Chinese
+---
 
-## Translation History Features
+## ✨ できること
 
-### Automatic History Saving
-Every translation is automatically saved to the database with:
-- Timestamp of translation
-- Detected source language
-- Target language selection
-- Original text and translated result
-- User association for privacy
+| | 機能 | 説明 |
+|---|---|---|
+| 🔤 | **11言語の翻訳** | 日本語・英語・中国語（簡体/繁体）・韓国語・フランス語・スペイン語・ドイツ語・イタリア語・ポルトガル語・ロシア語 |
+| 🔍 | **言語の自動検出** | 翻訳元を「自動検出」にすると、判定された言語を表示 |
+| ⇄ | **言語の入れ替え** | ワンクリックで翻訳元と翻訳先、原文と訳文を入れ替え |
+| 📋 | **コピー** | 翻訳結果をワンクリックでクリップボードへ |
+| 📄 | **長文対応** | 最大 5,000 文字。改行や文の区切りを保ったまま翻訳 |
+| 🕒 | **翻訳履歴** | 自動保存。キーワード検索・続きの読み込み・個別/一括削除・クリックで再利用 |
+| 🔐 | **ログイン** | アカウントごとに履歴を分けて管理（JWT 認証） |
 
-### History Management Interface
-- **View History**: Click the "履歴" (History) button to open the history modal
-- **Reuse Translations**: Click any history item to restore it to the input fields
-- **Individual Delete**: Use the "×" button on each entry to delete specific translations
-- **Bulk Delete**: Use "全削除" (Clear All) button to remove all history
-- **Search & Filter**: History is displayed in chronological order (most recent first)
+### ⌨️ 操作のコツ
 
-### History API Endpoints
-```
-GET    /translations/history           # Retrieve user's translation history
-DELETE /translations/history/{id}      # Delete specific translation
-DELETE /translations/history           # Clear all user's translation history
-```
+- `Enter` で翻訳、`Shift + Enter` で改行（日本語入力の変換確定では翻訳されません）
+- 履歴画面は `Esc` で閉じられます
+- 選んだ言語は次回も引き継がれます
 
-### Database Schema
-Translation history uses the following database structure:
-```sql
-CREATE TABLE translations (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    source_text TEXT,
-    translated_text TEXT,
-    source_lang TEXT,
-    target_lang TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+---
+
+## 🚀 はじめかた
+
+**必要なもの:** Python 3.10 以上、Node.js 18 以上
+
+### 1. バックエンド
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env            # SECRET_KEY を書き換える
+uvicorn main:app --reload --port 8000
 ```
 
-### Privacy & Security
-- All history data requires user authentication
-- Users can only access their own translation records
-- Complete user control over data deletion
-- No client-side storage of sensitive translation data
-- Secure JWT-based API access
+### 2. フロントエンド（別のターミナルで）
 
-## Tech Stack
+```bash
+cd frontend
+npm install
+npm start
+```
 
-### Backend
-- **FastAPI**: Modern, fast web framework for Python
-- **SQLAlchemy**: SQL toolkit and ORM with SQLite database
-- **JWT Authentication**: Secure token-based user authentication
-- **Google Translate API**: Translation service via `googletrans` library
-- **Passlib**: Password hashing and verification
+ブラウザで **http://localhost:3000** を開き、「新規登録」からアカウントを作れば使い始められます。
 
-### Frontend
-- **React 19**: Modern React with hooks and functional components
-- **TypeScript**: Type-safe JavaScript development
-- **React Router**: Client-side routing for SPA navigation
-- **Modal Components**: Custom translation history interface
-- **CSS-in-JS**: Inline styling for component-based design
+> 💡 API ドキュメントは http://localhost:8000/docs で確認できます。
 
-## Getting Started
+---
 
-### Prerequisites
-- Python 3.10 or higher
-- Node.js 18 or higher
-- npm or yarn package manager
+## ⚙️ 設定
 
-### Installation
+### バックエンド（`backend/.env`）
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repository-url>
-   cd translation-app
-   ```
+| 変数 | デフォルト | 説明 |
+|---|---|---|
+| `SECRET_KEY` | *（毎回ランダム生成）* | JWT の署名鍵。**未設定だと再起動のたびにログアウトされる**ので必ず設定してください |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | ログインの有効期限（分） |
+| `DATABASE_URL` | `sqlite:///./app.db` | データベースの接続先 |
+| `CORS_ORIGINS` | `http://localhost:3000` | フロントエンドの URL（カンマ区切りで複数可） |
+| `MAX_TEXT_LENGTH` | `5000` | 1 回に翻訳できる最大文字数 |
 
-2. **Backend setup**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+`SECRET_KEY` は次のコマンドで生成できます。
 
-3. **Frontend setup**
-   ```bash
-   cd ../frontend
-   npm install
-   ```
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
-### Running the Application
+### フロントエンド（`frontend/.env`）
 
-1. **Start the backend server**
-   ```bash
-   cd backend
-   source venv/bin/activate
-   uvicorn main:app --reload --port 8000
-   ```
+| 変数 | デフォルト | 説明 |
+|---|---|---|
+| `REACT_APP_API_URL` | `http://localhost:8000` | バックエンドの URL |
 
-2. **Start the frontend development server**
-   ```bash
-   cd frontend
-   npm start
-   ```
+---
 
-The application will be available at `http://localhost:3000` with the API at `http://localhost:8000`.
+## 📡 API
 
-## Usage
+`/register` `/login` `/health` 以外は `Authorization: Bearer <token>` が必要です。
 
-1. **Register** a new account or **login** with existing credentials
-2. **Enter text** to translate in the input field
-3. **Select target language** from the dropdown menu
-4. **Click translate** or press Enter to get the translation
-5. **View translation history** by clicking the "履歴" button
-6. **Reuse previous translations** by clicking on any history item
-7. **Manage your data** with individual or bulk delete options
+| メソッド | パス | 説明 |
+|---|---|---|
+| `POST` | `/register` | ユーザー登録（ユーザー名 3〜32 文字、パスワード 6 文字以上） |
+| `POST` | `/login` | ログインしてトークンを取得（form 形式） |
+| `GET` | `/me` | ログイン中のユーザー情報 |
+| `POST` | `/translate` | 翻訳して履歴に保存 |
+| `GET` | `/translations/history` | 履歴を新しい順に取得 |
+| `DELETE` | `/translations/history/{id}` | 履歴を 1 件削除 |
+| `DELETE` | `/translations/history` | 履歴をすべて削除 |
+| `GET` | `/health` | 死活監視 |
 
-## API Documentation
+<details>
+<summary><b>リクエスト / レスポンスの例</b></summary>
 
-Interactive API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+**翻訳**
 
-## Contributing
+```http
+POST /translate
+{ "text": "こんにちは", "target_lang": "en", "source_lang": "auto" }
+```
+```json
+{ "translated_text": "Hello", "source_lang": "ja" }
+```
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**履歴の取得** — `skip` / `limit`（最大 100）/ `q`（原文・訳文の部分一致検索）
 
-## License
+```http
+GET /translations/history?q=こんにちは&skip=0&limit=20
+```
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "source_text": "こんにちは",
+      "translated_text": "Hello",
+      "source_lang": "ja",
+      "target_lang": "en",
+      "created_at": "2025-01-01T12:00:00+09:00"
+    }
+  ],
+  "total": 1
+}
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+</details>
+
+---
+
+## 🧪 テスト
+
+```bash
+# バックエンド（翻訳サービスはモックするのでオフラインで動きます）
+cd backend
+pip install -r requirements-dev.txt
+pytest
+
+# フロントエンド
+cd frontend
+npm test
+```
+
+---
+
+## 📁 構成
+
+```
+translation-app/
+├── backend/
+│   ├── main.py            # API エンドポイント
+│   ├── translator.py      # 長文の分割と Google 翻訳の呼び出し
+│   ├── auth.py            # パスワードのハッシュ化・JWT
+│   ├── crud.py            # DB 操作
+│   ├── models.py          # テーブル定義（users / translations）
+│   ├── schemas.py         # 入出力の型と入力チェック
+│   ├── config.py          # 環境変数の読み込み
+│   └── tests/
+└── frontend/src/
+    ├── App.tsx            # ルーティングとログイン状態の管理
+    ├── api.ts             # API クライアント（期限切れ時は自動でログアウト）
+    ├── types.ts           # 型定義と対応言語の一覧
+    ├── utils.ts           # 共通フック・日時の整形
+    ├── App.css            # スタイル
+    ├── pages/             # ログイン・新規登録・翻訳画面
+    └── components/        # 入力欄・言語選択・翻訳結果・履歴モーダル
+```
+
+### 技術スタック
+
+| | |
+|---|---|
+| **バックエンド** | FastAPI / SQLAlchemy (SQLite) / PyJWT / bcrypt / googletrans |
+| **フロントエンド** | React 19 / TypeScript / React Router 7 / Create React App |
+
+---
+
+## ⚠️ 注意
+
+- 翻訳には Google 翻訳の非公式 API を使っているため、利用が集中すると一時的に失敗することがあります。業務で使う場合は公式の Cloud Translation API への置き換えを検討してください。
+- 対応言語を増やすときは `backend/schemas.py` の `SUPPORTED_LANGUAGES` と `frontend/src/types.ts` の `LANGUAGES` の両方を更新してください。
+
+## 📝 ライセンス
+
+[MIT License](LICENSE)

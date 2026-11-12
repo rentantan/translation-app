@@ -1,89 +1,80 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate, Link, useLocation } from "react-router-dom";
-import TranslationApp from "./pages/TranslationApp";
+import React, { useCallback, useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./App.css";
+import { api, clearToken, getToken, setToken, UNAUTHORIZED_EVENT } from "./api";
 import LoginForm from "./pages/LoginForm";
 import RegistrationForm from "./pages/RegistrationForm";
-
-const AppContent: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // 現在のパスが /register の場合は、ログインチェックをスキップ
-    if (location.pathname === "/register") {
-      return;
-    }
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsLoggedIn(true);
-      navigate("/");
-    } else {
-      setIsLoggedIn(false);
-      navigate("/login");
-    }
-  }, [navigate, location.pathname]);
-
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    navigate("/");
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsLoggedIn(false);
-    navigate("/login");
-  };
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(to right, #6a11cb, #2575fc)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "2rem",
-        fontFamily: '"Segoe UI", sans-serif',
-      }}
-    >
-      <Routes>
-        <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
-        <Route path="/register" element={<RegistrationForm />} />
-        
-        {/* ログインが必要なルート */}
-        <Route path="/" element={
-          isLoggedIn ? (
-            <TranslationApp onLogout={handleLogout} />
-          ) : (
-            <div style={{ color: 'white', textAlign: 'center' }}>
-              <h1>ログインしてください</h1>
-              <p>翻訳アプリを利用するにはログインが必要です。</p>
-              <p style={{ marginTop: '1rem' }}>
-                <Link 
-                  to="/login" 
-                  style={{ 
-                    color: 'white', 
-                    textDecoration: 'underline', 
-                    fontWeight: 'bold' 
-                  }}
-                >
-                  ログインページへ
-                </Link>
-              </p>
-            </div>
-          )
-        } />
-      </Routes>
-    </div>
-  );
-};
+import TranslationApp from "./pages/TranslationApp";
+import type { User } from "./types";
 
 const App: React.FC = () => {
+  const [token, setTokenState] = useState<string | null>(getToken);
+  const [user, setUser] = useState<User | null>(null);
+  const [sessionMessage, setSessionMessage] = useState("");
+
+  const handleLogin = useCallback((accessToken: string) => {
+    setToken(accessToken);
+    setTokenState(accessToken);
+    setSessionMessage("");
+  }, []);
+
+  const handleLogout = useCallback((message = "") => {
+    clearToken();
+    setTokenState(null);
+    setUser(null);
+    setSessionMessage(message);
+  }, []);
+
+  // トークンが有効か確認してユーザー情報を取得
+  useEffect(() => {
+    if (!token) return;
+    api.me().then(setUser).catch(() => {
+      /* 401 は UNAUTHORIZED_EVENT 経由で処理される */
+    });
+  }, [token]);
+
+  // API が 401 を返したら（トークン期限切れなど）ログアウト
+  useEffect(() => {
+    const onUnauthorized = () =>
+      handleLogout("ログインの有効期限が切れました。再度ログインしてください。");
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+  }, [handleLogout]);
+
+  const isLoggedIn = Boolean(token);
+
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <BrowserRouter>
+      <div className="app-shell">
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              isLoggedIn ? (
+                <Navigate to="/" replace />
+              ) : (
+                <LoginForm onLogin={handleLogin} notice={sessionMessage} />
+              )
+            }
+          />
+          <Route
+            path="/register"
+            element={isLoggedIn ? <Navigate to="/" replace /> : <RegistrationForm onLogin={handleLogin} />}
+          />
+          <Route
+            path="/"
+            element={
+              isLoggedIn ? (
+                <TranslationApp user={user} onLogout={() => handleLogout()} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 };
 
