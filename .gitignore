@@ -1,11 +1,20 @@
 # Node.js
 frontend/node_modules/
+frontend/build/
+frontend/coverage/
 
 # Python
 backend/venv/
-backend/__pycache__/
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 backend/.python-version
-backend/app.db
+backend/*.db
+
+# Environment
+.env
+.env.local
 
 # Mac
 .DS_Store
