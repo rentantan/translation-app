@@ -1,8 +1,8 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from auth import get_password_hash
-from models import TranslationHistory, User
+from app.security import get_password_hash
+from app.models import TranslationHistory, User
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:

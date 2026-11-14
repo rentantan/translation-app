@@ -1,5 +1,5 @@
 import React from "react";
-import { MAX_TEXT_LENGTH } from "../types";
+import { MAX_TEXT_LENGTH } from "../config";
 
 type Props = {
   value: string;

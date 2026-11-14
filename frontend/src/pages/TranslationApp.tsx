@@ -4,8 +4,12 @@ import LanguageSelect from "../components/LanguageSelect";
 import TextInput from "../components/TextInput";
 import TranslationHistory from "../components/TranslationHistory";
 import TranslationResult from "../components/TranslationResult";
-import { AUTO_DETECT, findLanguage, HistoryItem, LANGUAGES, MAX_TEXT_LENGTH, User } from "../types";
-import { copyToClipboard, usePersistentState, useToast } from "../utils";
+import { MAX_TEXT_LENGTH } from "../config";
+import { usePersistentState } from "../hooks/usePersistentState";
+import { useToast } from "../hooks/useToast";
+import { copyToClipboard } from "../lib/clipboard";
+import { AUTO_DETECT, findLanguage, LANGUAGES } from "../lib/languages";
+import type { HistoryItem, User } from "../types";
 
 interface TranslationAppProps {
   user: User | null;

@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
-import { HistoryItem, languageLabel } from "../types";
-import { formatRelativeTime, useDebounce } from "../utils";
+import { useDebounce } from "../hooks/useDebounce";
+import { formatRelativeTime } from "../lib/format";
+import { languageLabel } from "../lib/languages";
+import type { HistoryItem } from "../types";
 
 const PAGE_SIZE = 20;
 

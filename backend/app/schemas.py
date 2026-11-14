@@ -3,8 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from config import MAX_TEXT_LENGTH
-from models import JST
+from app.config import MAX_TEXT_LENGTH
+from app.models import JST
 
 # フロントエンドの言語リストと揃える
 SUPPORTED_LANGUAGES = {"en", "ja", "fr", "es", "de", "it", "ko", "zh-cn", "zh-tw", "pt", "ru"}
