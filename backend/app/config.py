@@ -30,3 +30,10 @@ CORS_ORIGINS = [
 
 # 1 回のリクエストで受け付ける最大文字数
 MAX_TEXT_LENGTH = int(os.getenv("MAX_TEXT_LENGTH", "5000"))
+
+# ログインの失敗がこの回数を超えたら、一定時間ログインを受け付けない
+LOGIN_MAX_FAILURES = int(os.getenv("LOGIN_MAX_FAILURES", "5"))
+LOGIN_LOCK_SECONDS = int(os.getenv("LOGIN_LOCK_SECONDS", "300"))
+
+# 1 ユーザーが 1 分間に翻訳できる回数
+TRANSLATE_RATE_LIMIT = int(os.getenv("TRANSLATE_RATE_LIMIT", "30"))

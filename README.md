@@ -67,6 +67,9 @@ npm start
 | `DATABASE_URL` | `sqlite:///./app.db` | データベースの接続先 |
 | `CORS_ORIGINS` | `http://localhost:3000` | フロントエンドの URL（カンマ区切りで複数可） |
 | `MAX_TEXT_LENGTH` | `5000` | 1 回に翻訳できる最大文字数 |
+| `LOGIN_MAX_FAILURES` | `5` | この回数ログインに失敗すると一時的にロック |
+| `LOGIN_LOCK_SECONDS` | `300` | ロックする秒数 |
+| `TRANSLATE_RATE_LIMIT` | `30` | 1 ユーザーが 1 分間に翻訳できる回数 |
 
 `SECRET_KEY` は次のコマンドで生成できます。
 
@@ -137,6 +140,8 @@ GET /translations/history?q=こんにちは&skip=0&limit=20
 
 ## 🧪 テスト
 
+GitHub へのプッシュ・PR ごとに GitHub Actions（`.github/workflows/ci.yml`）で自動実行されます。
+
 ```bash
 # バックエンド（翻訳サービスはモックするのでオフラインで動きます）
 cd backend
@@ -192,6 +197,7 @@ translation-app/
 
 ## ⚠️ 注意
 
+- ログイン・翻訳のレート制限はメモリ上で数えているため、1 プロセスでの運用を前提にしています。複数ワーカーで動かす場合は Redis などに置き換えてください。
 - 翻訳には Google 翻訳の非公式 API を使っているため、利用が集中すると一時的に失敗することがあります。業務で使う場合は公式の Cloud Translation API への置き換えを検討してください。
 - 対応言語を増やすときは `backend/app/schemas.py` の `SUPPORTED_LANGUAGES` と `frontend/src/lib/languages.ts` の `LANGUAGES` の両方を更新してください。
 

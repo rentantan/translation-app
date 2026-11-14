@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
+from app.rate_limit import login_failures, translate_limiter  # noqa: E402
 from app.translator import get_translate_fn  # noqa: E402
 
 
@@ -36,6 +37,8 @@ def client():
         finally:
             db.close()
 
+    login_failures.clear()
+    translate_limiter.clear()
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_translate_fn] = lambda: fake_translate
     with TestClient(app) as c:

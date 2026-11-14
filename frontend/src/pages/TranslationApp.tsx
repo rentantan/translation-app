@@ -143,23 +143,25 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
         <div className="panes">
           <TextInput value={text} onChange={setText} onEnter={() => translate()} onClear={clearForm} />
           <TranslationResult text={result.text} loading={loading} stale={stale} onCopy={handleCopy} />
-        </div>
 
-        {error && (
-          <div className="alert alert--error" role="alert">
-            {error}
+          {/* モバイルでは入力欄と結果の間に表示する */}
+          <div className="panes__actions">
+            {error && (
+              <div className="alert alert--error" role="alert">
+                {error}
+              </div>
+            )}
+            <button type="button" className="btn btn--primary" onClick={() => translate()} disabled={!canTranslate}>
+              {loading ? (
+                <>
+                  <span className="spinner spinner--light" aria-hidden="true" /> 翻訳中...
+                </>
+              ) : (
+                "翻訳する"
+              )}
+            </button>
           </div>
-        )}
-
-        <button type="button" className="btn btn--primary" onClick={() => translate()} disabled={!canTranslate}>
-          {loading ? (
-            <>
-              <span className="spinner spinner--light" aria-hidden="true" /> 翻訳中...
-            </>
-          ) : (
-            "翻訳する"
-          )}
-        </button>
+        </div>
       </main>
 
       <TranslationHistory

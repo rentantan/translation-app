@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { useDebounce } from "../hooks/useDebounce";
 import { formatRelativeTime } from "../lib/format";
@@ -6,6 +6,11 @@ import { languageLabel } from "../lib/languages";
 import type { HistoryItem } from "../types";
 
 const PAGE_SIZE = 20;
+
+/** 削除を取り消せる時間（ミリ秒） */
+const UNDO_MS = 5000;
+
+type PendingDelete = { item: HistoryItem; index: number; timer: ReturnType<typeof setTimeout> };
 
 interface Props {
   isVisible: boolean;
@@ -19,7 +24,11 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [undoItem, setUndoItem] = useState<HistoryItem | null>(null);
   const debouncedQuery = useDebounce(query.trim(), 300);
+  // 取り消し待ちの削除と、サーバーで削除中の ID（再読み込みで復活して見えないように除外する）
+  const pending = useRef<PendingDelete | null>(null);
+  const deletingIds = useRef(new Set<number>());
 
   const load = useCallback(
     async (skip: number) => {
@@ -27,7 +36,8 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
       setError("");
       try {
         const page = await api.history({ skip, limit: PAGE_SIZE, q: debouncedQuery });
-        setItems((prev) => (skip === 0 ? page.items : [...prev, ...page.items]));
+        const visible = page.items.filter((i) => !deletingIds.current.has(i.id));
+        setItems((prev) => (skip === 0 ? visible : [...prev, ...visible]));
         setTotal(page.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "履歴の取得に失敗しました");
@@ -58,18 +68,63 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
     };
   }, [isVisible, onClose]);
 
-  const deleteItem = async (id: number) => {
+  /** サーバーで実際に削除する。失敗したら一覧に戻す */
+  const commitDelete = useCallback(async ({ item, index }: Omit<PendingDelete, "timer">) => {
+    deletingIds.current.add(item.id);
     try {
-      await api.deleteHistory(id);
-      setItems((prev) => prev.filter((i) => i.id !== id));
-      setTotal((t) => t - 1);
+      await api.deleteHistory(item.id);
     } catch (err) {
+      setItems((prev) => [...prev.slice(0, index), item, ...prev.slice(index)]);
+      setTotal((t) => t + 1);
       setError(err instanceof Error ? err.message : "削除に失敗しました");
+    } finally {
+      deletingIds.current.delete(item.id);
     }
+  }, []);
+
+  /** 取り消し待ちの削除があれば、待たずに確定する */
+  const flushPending = useCallback(() => {
+    const current = pending.current;
+    if (!current) return;
+    clearTimeout(current.timer);
+    pending.current = null;
+    setUndoItem(null);
+    commitDelete(current);
+  }, [commitDelete]);
+
+  // 閉じたとき・画面を離れるときは取り消し待ちの削除を確定する
+  useEffect(() => {
+    if (!isVisible) flushPending();
+  }, [isVisible, flushPending]);
+  useEffect(() => flushPending, [flushPending]);
+
+  const deleteItem = (item: HistoryItem) => {
+    flushPending();
+    const index = items.findIndex((i) => i.id === item.id);
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setTotal((t) => t - 1);
+    const timer = setTimeout(flushPending, UNDO_MS);
+    pending.current = { item, index, timer };
+    setUndoItem(item);
+  };
+
+  const undoDelete = () => {
+    const current = pending.current;
+    if (!current) return;
+    clearTimeout(current.timer);
+    pending.current = null;
+    setUndoItem(null);
+    setItems((prev) => [...prev.slice(0, current.index), current.item, ...prev.slice(current.index)]);
+    setTotal((t) => t + 1);
   };
 
   const clearAll = async () => {
     if (!window.confirm("全ての翻訳履歴を削除しますか？この操作は元に戻せません。")) return;
+    if (pending.current) {
+      clearTimeout(pending.current.timer);
+      pending.current = null;
+      setUndoItem(null);
+    }
     try {
       await api.clearHistory();
       setItems([]);
@@ -145,7 +200,7 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                       className="icon-btn icon-btn--danger"
                       title="削除"
                       aria-label="この履歴を削除"
-                      onClick={() => deleteItem(item.id)}
+                      onClick={() => deleteItem(item)}
                     >
                       ✕
                     </button>
@@ -175,6 +230,15 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
             </>
           )}
         </div>
+
+        {undoItem && (
+          <div className="undo-bar" role="status">
+            <span>履歴を削除しました</span>
+            <button type="button" className="btn btn--outline" onClick={undoDelete}>
+              元に戻す
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
