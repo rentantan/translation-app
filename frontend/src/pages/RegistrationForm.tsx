@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 
 interface RegistrationFormProps {
   onLogin: (token: string) => void;
@@ -12,6 +13,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onLogin }) => {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // 確認欄が入力され始めたら一致しているかをその場で表示する
+  const mismatch = confirm.length > 0 && password !== confirm;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,9 +61,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onLogin }) => {
 
       <label className="field">
         <span className="field__label">パスワード（6文字以上）</span>
-        <input
-          className="input"
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -72,14 +73,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onLogin }) => {
 
       <label className="field">
         <span className="field__label">パスワード（確認）</span>
-        <input
-          className="input"
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
+          invalid={mismatch}
           required
         />
+        {mismatch && <span className="field__error">パスワードが一致しません</span>}
       </label>
 
       <button type="submit" className="btn btn--primary" disabled={loading}>

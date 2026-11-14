@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 
 interface LoginFormProps {
   onLogin: (token: string) => void;
@@ -47,9 +48,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, notice }) => {
 
       <label className="field">
         <span className="field__label">パスワード</span>
-        <input
-          className="input"
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

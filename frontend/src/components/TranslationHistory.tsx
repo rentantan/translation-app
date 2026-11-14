@@ -43,12 +43,19 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
     if (isVisible) load(0);
   }, [isVisible, load]);
 
-  // Esc で閉じる
+  // 開いている間: Esc で閉じる・背景をスクロールさせない・閉じたら元の場所にフォーカスを戻す
   useEffect(() => {
     if (!isVisible) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
   }, [isVisible, onClose]);
 
   const deleteItem = async (id: number) => {
@@ -86,7 +93,7 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
       >
         <div className="modal__header">
           <h2 id="history-title" className="modal__title">
-            翻訳履歴 <small style={{ fontSize: "0.9rem", color: "#888" }}>({total}件)</small>
+            翻訳履歴 <small className="modal__count">({total}件)</small>
           </h2>
           <div className="header__actions">
             {total > 0 && !debouncedQuery && (
@@ -101,12 +108,12 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
         </div>
 
         <input
-          className="input"
+          className="input modal__search"
           type="search"
           placeholder="🔍 原文・訳文を検索"
+          aria-label="履歴を検索"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ marginBottom: "1rem" }}
           autoFocus
         />
 
@@ -127,15 +134,7 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
           ) : (
             <>
               {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="history-item"
-                  role="button"
-                  tabIndex={0}
-                  title="クリックして再利用"
-                  onClick={() => onSelectTranslation(item)}
-                  onKeyDown={(e) => e.key === "Enter" && onSelectTranslation(item)}
-                >
+                <div key={item.id} className="history-item">
                   <div className="history-item__meta">
                     <span>
                       🕒 {formatRelativeTime(item.created_at)}　{languageLabel(item.source_lang)} →{" "}
@@ -146,16 +145,20 @@ const TranslationHistory: React.FC<Props> = ({ isVisible, onClose, onSelectTrans
                       className="icon-btn icon-btn--danger"
                       title="削除"
                       aria-label="この履歴を削除"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteItem(item.id);
-                      }}
+                      onClick={() => deleteItem(item.id)}
                     >
                       ✕
                     </button>
                   </div>
-                  <div className="history-item__text">{item.source_text}</div>
-                  <div className="history-item__text history-item__text--translated">{item.translated_text}</div>
+                  <button
+                    type="button"
+                    className="history-item__body"
+                    title="クリックして再利用"
+                    onClick={() => onSelectTranslation(item)}
+                  >
+                    <span className="history-item__text">{item.source_text}</span>
+                    <span className="history-item__text history-item__text--translated">{item.translated_text}</span>
+                  </button>
                 </div>
               ))}
 
