@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from database import Base
+from app.database import Base
 
 # 日本時間（夏時間がないので固定オフセットで十分）
 JST = timezone(timedelta(hours=9), "JST")

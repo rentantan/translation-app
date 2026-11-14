@@ -1,5 +1,5 @@
 import React from "react";
-import { languageLabel } from "../types";
+import { languageLabel } from "../lib/languages";
 
 type Props = {
   text: string;

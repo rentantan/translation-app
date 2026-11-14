@@ -1,12 +1,8 @@
 import os
-import sys
-from pathlib import Path
 
 # テスト用の設定（アプリの import より先に設定する）
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-only-0123456789")
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -14,9 +10,9 @@ from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from database import Base, get_db  # noqa: E402
-from main import app  # noqa: E402
-from translator import get_translate_fn  # noqa: E402
+from app.database import Base, get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from app.translator import get_translate_fn  # noqa: E402
 
 
 async def fake_translate(text: str, dest: str, src: str = "auto"):

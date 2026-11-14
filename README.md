@@ -39,7 +39,7 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env            # SECRET_KEY を書き換える
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### 2. フロントエンド（別のターミナルで）
@@ -155,19 +155,27 @@ npm test
 ```
 translation-app/
 ├── backend/
-│   ├── main.py            # API エンドポイント
-│   ├── translator.py      # 長文の分割と Google 翻訳の呼び出し
-│   ├── auth.py            # パスワードのハッシュ化・JWT
-│   ├── crud.py            # DB 操作
-│   ├── models.py          # テーブル定義（users / translations）
-│   ├── schemas.py         # 入出力の型と入力チェック
-│   ├── config.py          # 環境変数の読み込み
+│   ├── app/
+│   │   ├── main.py            # アプリ生成・CORS・ルーター登録
+│   │   ├── routers/
+│   │   │   ├── auth.py        # /register /login /me
+│   │   │   └── translations.py # /translate /translations/history
+│   │   ├── deps.py            # 共通の依存関係（ログインユーザーの取得）
+│   │   ├── translator.py      # 長文の分割と Google 翻訳の呼び出し
+│   │   ├── security.py        # パスワードのハッシュ化・JWT
+│   │   ├── crud.py            # DB 操作
+│   │   ├── models.py          # テーブル定義（users / translations）
+│   │   ├── schemas.py         # 入出力の型と入力チェック
+│   │   ├── database.py        # DB 接続
+│   │   └── config.py          # 環境変数の読み込み
 │   └── tests/
 └── frontend/src/
-    ├── App.tsx            # ルーティングとログイン状態の管理
+    ├── App.tsx            # ルーティング
     ├── api.ts             # API クライアント（期限切れ時は自動でログアウト）
-    ├── types.ts           # 型定義と対応言語の一覧
-    ├── utils.ts           # 共通フック・日時の整形
+    ├── config.ts          # API の URL・最大文字数
+    ├── types.ts           # API の型定義
+    ├── hooks/             # useAuth・useToast・useDebounce・usePersistentState
+    ├── lib/               # 対応言語の一覧・日時の整形・クリップボード
     ├── App.css            # スタイル
     ├── pages/             # ログイン・新規登録・翻訳画面
     └── components/        # 入力欄・言語選択・翻訳結果・履歴モーダル
@@ -185,7 +193,7 @@ translation-app/
 ## ⚠️ 注意
 
 - 翻訳には Google 翻訳の非公式 API を使っているため、利用が集中すると一時的に失敗することがあります。業務で使う場合は公式の Cloud Translation API への置き換えを検討してください。
-- 対応言語を増やすときは `backend/schemas.py` の `SUPPORTED_LANGUAGES` と `frontend/src/types.ts` の `LANGUAGES` の両方を更新してください。
+- 対応言語を増やすときは `backend/app/schemas.py` の `SUPPORTED_LANGUAGES` と `frontend/src/lib/languages.ts` の `LANGUAGES` の両方を更新してください。
 
 ## 📝 ライセンス
 

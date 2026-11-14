@@ -1,4 +1,4 @@
-from translator import split_text
+from app.translator import split_text
 
 
 def test_short_text_is_single_chunk():

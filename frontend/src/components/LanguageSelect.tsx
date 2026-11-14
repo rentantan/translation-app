@@ -1,5 +1,5 @@
 import React from "react";
-import { AUTO_DETECT, Language, languageLabel } from "../types";
+import { AUTO_DETECT, Language, languageLabel } from "../lib/languages";
 
 type Props = {
   languages: Language[];
