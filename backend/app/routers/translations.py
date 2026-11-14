@@ -8,6 +8,7 @@ from app import crud
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import User
+from app.rate_limit import translate_limiter
 from app.schemas import TranslationPage, TranslationRequest, TranslationResponse
 from app.translator import TranslateFn, get_translate_fn
 
@@ -23,6 +24,11 @@ async def translate(
     db: Session = Depends(get_db),
     translate_fn: TranslateFn = Depends(get_translate_fn),
 ):
+    if not translate_limiter.hit(str(current_user.id)):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="翻訳の回数が多すぎます。1分ほど待ってから再度お試しください",
+        )
     try:
         translated_text, detected_lang = await translate_fn(
             request.text, request.target_lang, request.source_lang

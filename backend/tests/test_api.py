@@ -1,5 +1,7 @@
 from conftest import signup
 
+from app.rate_limit import translate_limiter
+
 
 def test_register_validation(client):
     assert client.post("/register", json={"username": "ab", "password": "secret123"}).status_code == 422
@@ -93,3 +95,45 @@ def test_delete_and_clear(client, auth):
     res = client.delete("/translations/history", headers=auth)
     assert res.json()["deleted"] == 2
     assert client.get("/translations/history", headers=auth).json()["total"] == 0
+
+
+def test_same_translation_is_not_duplicated(client, auth):
+    for _ in range(3):
+        client.post("/translate", json={"text": "こんにちは", "target_lang": "en"}, headers=auth)
+    assert client.get("/translations/history", headers=auth).json()["total"] == 1
+
+    # 翻訳先が変われば別の履歴として残す
+    client.post("/translate", json={"text": "こんにちは", "target_lang": "fr"}, headers=auth)
+    # 直前と違えば、過去と同じ内容でも新しく残す
+    client.post("/translate", json={"text": "こんにちは", "target_lang": "en"}, headers=auth)
+    items = client.get("/translations/history", headers=auth).json()["items"]
+    assert [i["target_lang"] for i in items] == ["en", "fr", "en"]
+
+
+def test_login_is_locked_after_repeated_failures(client, auth):
+    for _ in range(5):
+        assert client.post("/login", data={"username": "alice", "password": "wrong-pass"}).status_code == 401
+    # ロック中は正しいパスワードでも弾く
+    res = client.post("/login", data={"username": "alice", "password": "secret123"})
+    assert res.status_code == 429
+
+
+def test_login_success_resets_failures(client, auth):
+    for _ in range(4):
+        client.post("/login", data={"username": "alice", "password": "wrong-pass"})
+    assert client.post("/login", data={"username": "alice", "password": "secret123"}).status_code == 200
+    for _ in range(4):
+        client.post("/login", data={"username": "alice", "password": "wrong-pass"})
+    assert client.post("/login", data={"username": "alice", "password": "secret123"}).status_code == 200
+
+
+def test_translate_rate_limit(client, auth):
+    original = translate_limiter.max_calls
+    translate_limiter.max_calls = 2
+    try:
+        for word in ["a", "b"]:
+            assert client.post("/translate", json={"text": word, "target_lang": "ja"}, headers=auth).status_code == 200
+        res = client.post("/translate", json={"text": "c", "target_lang": "ja"}, headers=auth)
+        assert res.status_code == 429
+    finally:
+        translate_limiter.max_calls = original

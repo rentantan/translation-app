@@ -320,7 +320,14 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
+}
+
+.panes__actions {
+  grid-column: 1 / -1;
+}
+
+.panes__actions .alert {
+  margin-bottom: 0.75rem;
 }
 
 .pane {
@@ -545,6 +552,38 @@ body {
   margin-top: 0.4rem;
 }
 
+.undo-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border-radius: var(--radius);
+  background: rgba(45, 52, 54, 0.92);
+  color: white;
+  font-size: 0.9rem;
+  animation: fade-in-up 0.15s ease;
+}
+
+.undo-bar .btn--outline {
+  border-color: white;
+  color: white;
+  background: transparent;
+}
+
+.undo-bar .btn--outline:hover {
+  background: white;
+  color: var(--text);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
 .load-more {
   align-self: center;
   margin: 0.5rem 0;
@@ -555,6 +594,15 @@ body {
 @media (max-width: 760px) {
   .panes {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .panes__actions {
+    order: 1;
+  }
+
+  .pane--result {
+    order: 2;
   }
 
   .pane__textarea,

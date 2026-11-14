@@ -2,7 +2,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.security import get_password_hash
-from app.models import TranslationHistory, User
+from app.models import TranslationHistory, User, get_jst_now
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:
@@ -25,14 +25,35 @@ def create_translation(
     source_lang: str,
     target_lang: str,
 ) -> TranslationHistory:
-    item = TranslationHistory(
-        user_id=user_id,
-        source_text=source_text,
-        translated_text=translated_text,
-        source_lang=source_lang,
-        target_lang=target_lang,
+    """翻訳履歴を保存する。
+
+    直前の履歴と原文・言語が同じ場合（Enter の連打や再翻訳など）は、
+    新しく追加せずに直前の履歴を更新して重複を防ぐ。
+    """
+    latest = (
+        db.query(TranslationHistory)
+        .filter(TranslationHistory.user_id == user_id)
+        .order_by(TranslationHistory.created_at.desc(), TranslationHistory.id.desc())
+        .first()
     )
-    db.add(item)
+    if (
+        latest is not None
+        and latest.source_text == source_text
+        and latest.source_lang == source_lang
+        and latest.target_lang == target_lang
+    ):
+        latest.translated_text = translated_text
+        latest.created_at = get_jst_now()
+        item = latest
+    else:
+        item = TranslationHistory(
+            user_id=user_id,
+            source_text=source_text,
+            translated_text=translated_text,
+            source_lang=source_lang,
+            target_lang=target_lang,
+        )
+        db.add(item)
     db.commit()
     db.refresh(item)
     return item
