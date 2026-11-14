@@ -5,9 +5,10 @@ type Props = {
   value: string;
   onChange: (val: string) => void;
   onEnter: () => void;
+  onClear?: () => void;
 };
 
-const TextInput: React.FC<Props> = ({ value, onChange, onEnter }) => {
+const TextInput: React.FC<Props> = ({ value, onChange, onEnter, onClear }) => {
   const over = value.length > MAX_TEXT_LENGTH;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -20,24 +21,30 @@ const TextInput: React.FC<Props> = ({ value, onChange, onEnter }) => {
   };
 
   return (
-    <>
-      <textarea
-        className="textarea"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        rows={6}
-        placeholder="翻訳したい文章を入力"
-        aria-label="翻訳する文章"
-        autoFocus
-      />
+    <div className="pane">
+      <div className="pane__body">
+        <textarea
+          className="textarea pane__textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="翻訳したい文章を入力"
+          aria-label="翻訳する文章"
+          autoFocus
+        />
+        {value && onClear && (
+          <button type="button" className="icon-btn pane__clear" onClick={onClear} aria-label="入力をクリア" title="クリア">
+            ✕
+          </button>
+        )}
+      </div>
       <div className={`input-meta${over ? " input-meta--over" : ""}`}>
-        <span>Enter で翻訳 / Shift + Enter で改行</span>
+        <span className="input-meta__hint">Enter で翻訳 / Shift + Enter で改行</span>
         <span>
           {value.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()} 文字
         </span>
       </div>
-    </>
+    </div>
   );
 };
 

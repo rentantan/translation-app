@@ -16,10 +16,14 @@ interface TranslationAppProps {
   onLogout: () => void;
 }
 
+/** 表示中の翻訳結果と、それを生んだ入力 */
+type Result = { text: string; source: string; lang: string };
+
+const EMPTY_RESULT: Result = { text: "", source: "", lang: "" };
+
 const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
   const [text, setText] = useState("");
-  const [translated, setTranslated] = useState("");
-  const [resultLang, setResultLang] = useState("");
+  const [result, setResult] = useState<Result>(EMPTY_RESULT);
   // 言語の選択は次回も引き継ぐ
   const [sourceLang, setSourceLang] = usePersistentState("sourceLang", AUTO_DETECT);
   const [targetLang, setTargetLang] = usePersistentState("targetLang", "en");
@@ -31,8 +35,9 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
 
   const tooLong = text.length > MAX_TEXT_LENGTH;
   const canTranslate = !loading && Boolean(text.trim()) && !tooLong;
+  const stale = Boolean(result.text) && (result.source !== text || result.lang !== targetLang);
 
-  const handleTranslate = async () => {
+  const translate = async (target = targetLang, source = sourceLang) => {
     if (!canTranslate) {
       if (tooLong) setError(`${MAX_TEXT_LENGTH.toLocaleString()}文字以内で入力してください`);
       return;
@@ -40,9 +45,8 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
     setError("");
     setLoading(true);
     try {
-      const data = await api.translate(text, targetLang, sourceLang);
-      setTranslated(data.translated_text);
-      setResultLang(targetLang);
+      const data = await api.translate(text, target, source);
+      setResult({ text: data.translated_text, source: text, lang: target });
       setDetectedLang(data.source_lang);
     } catch (err) {
       setError(err instanceof Error ? err.message : "翻訳に失敗しました");
@@ -51,26 +55,30 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
     }
   };
 
+  // 翻訳済みの状態で翻訳先を変えたら、そのまま訳し直す
+  const handleTargetChange = (lang: string) => {
+    setTargetLang(lang);
+    if (result.text && text.trim()) translate(lang);
+  };
+
   // 入れ替え先の翻訳元言語（自動検出なら検出結果を使う）
   const effectiveSource = sourceLang === AUTO_DETECT ? detectedLang : sourceLang;
-  const canSwap = Boolean(findLanguage(effectiveSource)) && effectiveSource !== targetLang;
+  const canSwap = !loading && Boolean(findLanguage(effectiveSource)) && effectiveSource !== targetLang;
 
   const handleSwap = () => {
     if (!canSwap || !effectiveSource) return;
     setSourceLang(targetLang);
     setTargetLang(effectiveSource);
-    if (translated) {
-      setText(translated);
-      setTranslated(text);
-      setResultLang(effectiveSource);
+    if (result.text && !stale) {
+      setText(result.text);
+      setResult({ text, source: result.text, lang: effectiveSource });
     }
     setDetectedLang(null);
   };
 
   const handleSelectFromHistory = (item: HistoryItem) => {
     setText(item.source_text);
-    setTranslated(item.translated_text);
-    setResultLang(item.target_lang);
+    setResult({ text: item.translated_text, source: item.source_text, lang: item.target_lang });
     setTargetLang(item.target_lang);
     setSourceLang(AUTO_DETECT);
     setDetectedLang(item.source_lang ?? null);
@@ -84,14 +92,14 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
 
   const clearForm = () => {
     setText("");
-    setTranslated("");
+    setResult(EMPTY_RESULT);
     setDetectedLang(null);
     setError("");
   };
 
   return (
     <>
-      <main className="card">
+      <main className="card card--wide">
         <header className="header">
           <div>
             <h1 className="header__title">翻訳アプリ</h1>
@@ -101,10 +109,7 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
             <button type="button" className="btn btn--outline" onClick={() => setShowHistory(true)}>
               🕒 履歴
             </button>
-            <button type="button" className="btn btn--ghost" onClick={clearForm} disabled={!text && !translated}>
-              クリア
-            </button>
-            <button type="button" className="btn btn--danger" onClick={onLogout}>
+            <button type="button" className="btn btn--ghost" onClick={onLogout}>
               ログアウト
             </button>
           </div>
@@ -132,10 +137,13 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
           >
             ⇄
           </button>
-          <LanguageSelect label="翻訳先の言語" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
+          <LanguageSelect label="翻訳先の言語" languages={LANGUAGES} value={targetLang} onChange={handleTargetChange} />
         </div>
 
-        <TextInput value={text} onChange={setText} onEnter={handleTranslate} />
+        <div className="panes">
+          <TextInput value={text} onChange={setText} onEnter={() => translate()} onClear={clearForm} />
+          <TranslationResult text={result.text} loading={loading} stale={stale} onCopy={handleCopy} />
+        </div>
 
         {error && (
           <div className="alert alert--error" role="alert">
@@ -143,11 +151,15 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
           </div>
         )}
 
-        <button type="button" className="btn btn--primary" onClick={handleTranslate} disabled={!canTranslate}>
-          {loading ? "翻訳中..." : "翻訳する"}
+        <button type="button" className="btn btn--primary" onClick={() => translate()} disabled={!canTranslate}>
+          {loading ? (
+            <>
+              <span className="spinner spinner--light" aria-hidden="true" /> 翻訳中...
+            </>
+          ) : (
+            "翻訳する"
+          )}
         </button>
-
-        <TranslationResult text={translated} targetLang={resultLang} onCopy={handleCopy} />
       </main>
 
       <TranslationHistory
@@ -156,7 +168,11 @@ const TranslationApp: React.FC<TranslationAppProps> = ({ user, onLogout }) => {
         onSelectTranslation={handleSelectFromHistory}
       />
 
-      {toast.message && <div className="toast">{toast.message}</div>}
+      {toast.message && (
+        <div className="toast" role="status">
+          {toast.message}
+        </div>
+      )}
     </>
   );
 };
